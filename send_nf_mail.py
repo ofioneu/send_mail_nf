@@ -13,13 +13,13 @@ import datetime
 import configparser
 import logging
 from logging.config import fileConfig
+import time
 
 config = configparser.ConfigParser(allow_no_value=True)
 fileConfig('logging.cfg')
 
 logger = logging.getLogger(__name__)
 config.read('config.ini')
-
 
 try:
    host= config['EMAIL']['host']
@@ -98,6 +98,8 @@ def send_mail(host, port, user, password, msg, assunto, path, mail_to, filename)
       server.sendmail(email_msg['From'], recipients, email_msg.as_string())
       logger.info('Mensagem enviada!')
       server.quit()
+      with open('check_mail.txt', 'w') as f:
+         f.write('True')
    except Exception as e:
       logger.exception('Falha ao enviar email: ')
 
@@ -166,7 +168,17 @@ def main():
       delete_files(destino)
    except Exception as e:
       logger.exception('Falha ao copiar arquivos para pasta temporaria: ')
+   
 
 
 if __name__ == "__main__":
-   main()
+   while True:
+      if date.day == 1:
+         main()
+         with open('check_mail.txt', 'r') as f:
+            res = f.readline()
+            if res == 'True':
+               time.sleep(86400)
+            else:
+               logger.info('Error ao parar de enviar email!')
+      time.sleep(3600)
