@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
+import email
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -14,6 +15,8 @@ import configparser
 import logging
 from logging.config import fileConfig
 import time
+
+import sqlite3
 
 config = configparser.ConfigParser(allow_no_value=True)
 fileConfig('logging.cfg')
@@ -34,8 +37,19 @@ try:
    filepath_ = config['PATH'] ['path_out']
 
    recipients =[mail_to1, mail_to2]
+
 except Exception as e:
    logger.exception('Falha ao ler arquivos de configuracao:')
+
+
+try:
+   conn = sqlite3.connect('C:/Users/HP/Desktop/Dev/SQLiteStudio/fiscal')
+   cur = conn.cursor()
+   logger.info('Sucesso conexao com o bd')
+
+except Exception as e:
+   logger.exception('Falha na conexão do banco de dados:')
+
 
 date = datetime.datetime.now()
 
@@ -97,9 +111,11 @@ def send_mail(host, port, user, password, msg, assunto, path, mail_to, filename)
       logger.info('Enviando mensagem...')
       server.sendmail(email_msg['From'], recipients, email_msg.as_string())
       logger.info('Mensagem enviada!')
-      server.quit()
-      with open('check_mail.txt', 'w') as f:
-         f.write('True')
+      server.quit()      
+      sql = 'INSERT INTO date_mail (date, sent) values(?,?)'
+      param = ('{}{}'.format(date.month, date.year), 'True')
+      cur.execute(sql, param)
+      conn.commit()
    except Exception as e:
       logger.exception('Falha ao enviar email: ')
 
@@ -173,12 +189,16 @@ def main():
 
 if __name__ == "__main__":
    while True:
-      if date.day == 1:
-         main()
-         with open('check_mail.txt', 'r') as f:
-            res = f.readline()
-            if res == 'True':
-               time.sleep(86400)
-            else:
-               logger.info('Error ao parar de enviar email!')
+      try:
+         sql = 'select sent from date_mail where date = "{}{}"'.format(date.month, date.year)
+         print(sql)
+         cur.execute(sql)
+         row = cur.fetchone()
+         if row == None:
+            logger.info('Email ainda não enviado, enviando email...')
+            main()
+      except Exception as e:
+         logger.exception("Falha ao checar se email já foi enviado no mes atual")
+   
+         
       time.sleep(3600)

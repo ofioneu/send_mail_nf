@@ -1,0 +1,10 @@
+*** Sqlite ****
+
+create table date_mail(
+mail_id integer PRIMARY KEY AUTOINCREMENT,
+data text not null,
+sent text not null
+)
+
+
+
